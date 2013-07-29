@@ -90,7 +90,7 @@ QIcon qSlicerFiducialsSegmentationModule::icon()const
 //-----------------------------------------------------------------------------
 QStringList qSlicerFiducialsSegmentationModule::categories() const
 {
-  return QStringList() << "Surface Models";
+  return QStringList() << "Segmentation";
 }
 
 //-----------------------------------------------------------------------------

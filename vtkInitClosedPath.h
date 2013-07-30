@@ -5,10 +5,7 @@
 #include "vtkPolyDataAlgorithm.h"
 #include "vtkSmartPointer.h"
 
-struct Edge {
-  int pt1;
-  int pt2;
-};
+#include <iostream> // debug
 
 class vtkInitClosedPath : public vtkPolyDataAlgorithm
 {
@@ -62,50 +59,56 @@ protected:
   virtual int FillInputPortInformation(int port, vtkInformation *info);
 
 private:
-  bool haveConnectedCircuit (std::vector<Edge> connectedEdge, int idxSource, int idxSink) 
+  std::vector< std::vector<bool> > connectedCircuit;
+  std::vector< std::vector<bool> > connectedEdge;
+  bool haveConnectedCircuit (int iiSource, int jjSink) 
     {
-      for (int i = 0; i < connectedEdge.size(); i++) {
-        if (connectedEdge[i].pt1 == idxSource) {
-          if (connectedEdge[i].pt2 == idxSink)
-            return true;
-          else {
-            int newIdx = connectedEdge[i].pt2;
-            std::vector<Edge> newConnectedEdge = connectedEdge;
-            newConnectedEdge.erase( newConnectedEdge.begin() + i );
-            if( haveConnectedCircuit (newConnectedEdge, newIdx, idxSink) )
+      // cout << "haveConnectedCircuit Start" << endl;
+      if (connectedCircuit[iiSource][jjSink] || connectedCircuit[jjSink][iiSource])
+        return true;
+      if (connectedEdge[iiSource][jjSink] || connectedEdge[jjSink][iiSource]) {
+        connectedCircuit[iiSource][jjSink] = true;
+        return true;
+      } else {
+        for (int i = 0; i < connectedEdge.size(); i++) {
+          if (connectedEdge[iiSource][i]) {
+            connectedEdge[iiSource][i] = false;
+            connectedEdge[i][iiSource] = false;
+            bool result = haveConnectedCircuit (i, jjSink);
+            connectedEdge[iiSource][i] = true;
+            if (result) {
+              connectedCircuit[iiSource][jjSink] = true;
               return true;
+            }
           }
-        } else if (connectedEdge[i].pt2 == idxSource) {
-          if (connectedEdge[i].pt1 == idxSink)
-            return true;
-          else {
-            int newIdx = connectedEdge[i].pt1;
-            std::vector<Edge> newConnectedEdge = connectedEdge;
-            newConnectedEdge.erase( newConnectedEdge.begin() + i );
-            if( haveConnectedCircuit (newConnectedEdge, newIdx, idxSink) )
+          else if (connectedEdge[i][iiSource]) {
+            connectedEdge[i][iiSource] = false;
+            connectedEdge[iiSource][i] = false;
+            bool result = haveConnectedCircuit (i, jjSink);
+            connectedEdge[i][iiSource] = true;
+            if (result) {
+              connectedCircuit[iiSource][jjSink] = true;
               return true;
+            }
           }
-        }
-        if (connectedEdge[i].pt1 == idxSink) {
-          if (connectedEdge[i].pt2 == idxSource)
-            return true;
-          else {
-            int newIdx = connectedEdge[i].pt2;
-            std::vector<Edge> newConnectedEdge = connectedEdge;
-            newConnectedEdge.erase( newConnectedEdge.begin() + i );
-            if( haveConnectedCircuit (newConnectedEdge, idxSource, newIdx) )
-              return true;
-          }
-        } else if (connectedEdge[i].pt2 == idxSink) {
-          if (connectedEdge[i].pt1 == idxSource)
-            return true;
-          else {
-            int newIdx = connectedEdge[i].pt1;
-            std::vector<Edge> newConnectedEdge = connectedEdge;
-            newConnectedEdge.erase( newConnectedEdge.begin() + i );
-            if( haveConnectedCircuit (newConnectedEdge, idxSource, newIdx) )
-              return true;
-          }
+          // if (connectedEdge[jjSink][i]) {
+          //   connectedEdge[jjSink][i] = false;
+          //   bool result = haveConnectedCircuit (i, iiSource);
+          //   connectedEdge[jjSink][i] = true;
+          //   if (result) {
+          //     connectedCircuit[iiSource][jjSink] = true;
+          //     return true;
+          //   }
+          // }
+          // else if (connectedEdge[i][jjSink]) {
+          //   connectedEdge[i][jjSink] = false;
+          //   bool result = haveConnectedCircuit (i, iiSource);
+          //   connectedEdge[i][jjSink] = true;
+          //   if (result) {
+          //     connectedCircuit[iiSource][jjSink] = true;
+          //     return true;
+          //   }
+          // }  
         }
       }
       return false;

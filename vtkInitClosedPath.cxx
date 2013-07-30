@@ -594,38 +594,20 @@ BUILD_DISTANCE_TO_INIT:
     std::vector<int> C = seedIdx;
 
     // now append to the initializers...
-  //   for( ::size_t i = 0; i < LstarIJidx.size(); i++ ) {
-  //     ::size_t NUM_KEEP = LstarIJidx.size();
-  //     for( ::size_t k = 0; k < NUM_KEEP; k++ ) {
-  //       int idxAdd = i;
-  //       double Lbest = 1e9;
-  //       int jBest;
-  //       for( ::size_t j = 0; j < LstarIJidx.size(); j++ ) {
-  //         int idx    = LstarIJidx[i][j];
-  //         double val = LstarIJval[i][j];
-  //         if( val > 0 && val < Lbest ) {
-  //           idxAdd = idx;
-  //           Lbest  = val; // i's Nearest Neighbor is j!!
-  //           jBest  = j;
-  //         }  
-  //       }
   #define NUM_INIT_RECURSIONS 2
-  //       if( 1 ) {
-  //         if( idxAdd >= 0 && (0== std::count( seedIdx.begin(), seedIdx.end(), idxAdd ) ) )
-  //             seedIdx.push_back(idxAdd);
-  //       }
-
-  //       // path from... i to idxAdd ?
-  //       int idxSource =  LstarIJidx[k][k];
-  //       int idxSink   =  LstarIJidx[i][i];
-   
 
     std::vector<int> seedIdxCopy (seedIdx);
     std::vector<int> seedIdxCopyCnt;
-    std::vector<Edge> connectedEdge;
-    Edge edge;
-    for (int i = 0; i < seedIdxCopy.size(); i ++) {
+    this->connectedEdge.clear();
+    this->connectedEdge.resize( seedIdx.size() );
+    this->connectedCircuit.clear();
+    this->connectedCircuit.resize( seedIdx.size() );
+    for (int i = 0; i < seedIdx.size(); i ++) {
       seedIdxCopyCnt.push_back(2);
+      for (int j = 0; j < seedIdx.size(); j ++) {
+        this->connectedCircuit[i].push_back(false);
+        this->connectedEdge[i].push_back(false);
+      }
     }
 
     // implement a Cheapest Path Algorithm (CPA) to find a Hamilton circuit
@@ -687,18 +669,27 @@ BUILD_DISTANCE_TO_INIT:
               minAStarVal[i].push_back(1e9);
             }
           }
-
           for (int jj = 0; jj < size; jj++) {
             int idxSource = seedIdxCopy[jj];
+            int iiSource;
+            for (int i = 0; i < seedIdx.size(); i++) {
+              if (idxSource == seedIdx[i])
+                iiSource = i;
+            }
 
             for (int ii = 0; ii < size; ii++) {
               if (frontier_idx[jj][ii].size() == 1 && frontier_idx[jj][ii][0] == -1) {
                 frontier_idx[jj][ii][0] = idxSource;
               }
               int idxSink = seedIdxCopy[ii];
+              int jjSink;
+              for (int i = 0; i < seedIdx.size(); i++) {
+                if (idxSink == seedIdx[i])
+                  jjSink = i;
+              }
 
               // test if form closed sub circuit
-              bool haveSubCircuit = haveConnectedCircuit (connectedEdge, idxSource, idxSink);
+              bool haveSubCircuit = this->haveConnectedCircuit (iiSource, jjSink);
               // cout << "haveSubCircuit: " << haveSubCircuit << endl;
 
               if (idxSource != idxSink && !(haveSubCircuit && size > 2) )
@@ -770,16 +761,22 @@ BUILD_DISTANCE_TO_INIT:
         loopend:
 
         // put this edge into connectedEdge
-        edge.pt1 = bestSinkId;
-        edge.pt2 = bestSourceId;
-        connectedEdge.push_back(edge);
+        int iiSource;
+        int jjSink;
+        for (int i = 0; i < seedIdx.size(); i ++) {
+          if (bestSinkId == seedIdx[i])
+            jjSink = i;
+          if (bestSourceId == seedIdx[i])
+            iiSource = i;
+        }
+        this->connectedEdge[iiSource][jjSink] = true;
 
         // update seedIdxCopyCnt & seedIdxCopy
         seedIdxCopyCnt[bestSinkII] --;
         seedIdxCopyCnt[bestSourceJJ] --;
         // delete zero cnt seed
         for (int i = 0; i < size; i ++) {
-          if (seedIdxCopyCnt[i] <= 0){
+          if (seedIdxCopyCnt[i] <= 0) {
             seedIdxCopyCnt.erase( seedIdxCopyCnt.begin() + i );
             seedIdxCopy.erase( seedIdxCopy.begin() + i );
             i --;
